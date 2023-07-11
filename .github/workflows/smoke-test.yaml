@@ -20,22 +20,12 @@ jobs:
 
       - name: Define App Version
         shell: bash
-        run: echo "APP_VERSION=0.0.1-${GITHUB_REF_NAME//[^a-zA-Z0-9]/}.${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}" >> $GITHUB_ENV
+        run: echo "APP_VERSION=0.0.1" >> $GITHUB_ENV
 
       - name: Package Helm Chart for Replicated
         id: package-helm-chart
         run: |
-          helm package wordpress -u -d kots \
-            --app-version=0.0.1-${{ github.ref_name }} \
-            --version=${{ env.APP_VERSION }}
-
-      - name: Update the HelmChart kind
-        uses: jacobtomlinson/gha-find-replace@v3
-        with:
-          include: 'kots/workpress/Chart.yaml'
-          find: '$VERSION'
-          replace: ${{ env.APP_VERSION }}
-          regex: false
+          helm package wordpress -u -d kots 
 
       - name: Smoke Test
         id: smoke-test
