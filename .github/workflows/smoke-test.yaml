@@ -43,12 +43,12 @@ jobs:
         with:
           app-slug: ${{ secrets.REPLICATED_APP }}
           api-token: ${{ secrets.REPLICATED_API_TOKEN }}
-          yaml-dir: kots
+          yaml-dir: kots  
           kubernetes-distribution: ${{ matrix.cluster.distribution }}
           kubernetes-version: ${{ matrix.cluster.version }}
           installation-method: helm
           test-script: ./tests/test.sh
-          helm-chart-name: relmatrix-app
+          helm-chart-name: wordpress
           helm-values: |
             image:
               tag: latest
