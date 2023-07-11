@@ -1,0 +1,61 @@
+name: App Release
+on:
+  push:
+    branches: [main]
+    paths:
+    - 'manifests/**/*'
+    - 'templates/**/*'
+    - Chart.yaml
+    - '.github/workflows/release.yml'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: 
+          - slug: "wordpress-enterprise"
+            dir: manifests
+          - slug: "wordpress-express"
+            dir: manifests2
+        origins:
+          - api: ""
+            gql: ""
+            token: REPLICATED_API_TOKEN
+          - api: "https://api.staging.replicated.com/vendor"
+            gql: "https://g.staging.replicated.com/graphql"
+            token: REPLICATED_API_TOKEN_STAGING
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Define App Version
+      shell: bash
+      run: echo "APP_VERSION=0.4.0-${GITHUB_REF_NAME//[^a-zA-Z0-9]/}.${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+    - name: Package Helm Chart for Replicated
+      id: package-helm-chart
+      run: |
+        mkdir -p ${{ matrix.app.dir }}
+        helm package . -u -d ${{ matrix.app.dir }} \
+          --app-version=0.0.1-${{ github.ref_name }} \
+          --version=${{ env.APP_VERSION }}
+
+
+    - name: Update the HelmChart kind
+      uses: jacobtomlinson/gha-find-replace@v3
+      with:
+        include: 'manifests/myapp.yaml'
+        find: '$VERSION'
+        replace: ${{ env.APP_VERSION }}
+        regex: false
+
+    - name: Create Release
+      uses: docker://replicated/vendor-cli:latest
+      with:
+        args: release create --promote=Unstable --version=${{ env.APP_VERSION }} --yaml-dir=${{ matrix.app.dir }} 
+      env:
+        REPLICATED_API_TOKEN: ${{ secrets[matrix.origins.token] }}
+        REPLICATED_APP: ${{ matrix.app.slug }}
+        REPLICATED_API_ORIGIN: ${{ matrix.origins.api }}
+        REPLICATED_GRAPHQL_ORIGIN: ${{ matrix.origins.gql }}
